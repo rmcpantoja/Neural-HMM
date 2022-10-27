@@ -67,12 +67,12 @@ def create_hparams(generate_parameters=False):
         ################################
         # Data Parameters             #
         ################################
-        batch_size=7,
+        batch_size=6,
         load_mel_from_disk=False,
         training_files="data/filelists/ljs_audio_text_train_filelist.txt",
         validation_files="data/filelists/ljs_audio_text_val_filelist.txt",
-        text_cleaners=["english_cleaners"],
-        phonetise=True,
+        text_cleaners=["basic_cleaners"],
+        phonetise=False,
         cmu_phonetiser=CMUDict("src/phonetised_files/cmudict-0.7b.txt"),
         num_workers=20,
         ################################
