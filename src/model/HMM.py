@@ -106,9 +106,8 @@ class HMM(nn.Module):
 
             log_c[:, t] = torch.logsumexp(log_alpha_temp, dim=1)
             self.log_alpha_scaled[:, t, :] = log_alpha_temp - log_c[:, t].unsqueeze(1)
-
+            self.transition_vector[:, t] = transition_vector
             # Save for plotting
-            self.transition_vector[:, t] = transition_vector.detach()
             self.means.append(mean.detach())
 
         log_c = self.mask_lengths(mel_inputs, mel_inputs_lengths, log_c)
@@ -217,10 +216,10 @@ class HMM(nn.Module):
         batch_size, T_max, _ = mel_inputs.shape
         self.log_alpha_scaled = mel_inputs.new_zeros((batch_size, T_max, self.N))
         log_c = mel_inputs.new_zeros(batch_size, T_max)
+        self.transition_vector = mel_inputs.new_zeros((batch_size, T_max, self.N))
 
         # Saving for plotting later, will not have gradient tapes
         self.means = []
-        self.transition_vector = mel_inputs.new_zeros((batch_size, T_max, self.N))
 
         return log_c
 
@@ -338,7 +337,7 @@ class HMM(nn.Module):
         return sum_final_log_c
 
     @torch.no_grad()
-    def sample(self, encoder_outputs, T=None):
+    def sample(self, encoder_outputs, sampling_temp=1.0, T=None):
         r"""
         Samples an output from the parameter models
 
@@ -353,7 +352,7 @@ class HMM(nn.Module):
         if not T:
             T = self.hparams.max_sampling_time
 
-        self.N = encoder_outputs.shape[1]
+        self.N = encoder_outputs.shape[1] - 1
         if self.hparams.n_frames_per_step > 0:
             ar_mel_inputs = self.go_tokens.unsqueeze(0)
         else:
@@ -398,7 +397,7 @@ class HMM(nn.Module):
             input_parameter_values.append([ar_mel_inputs, current_z_number])
             output_parameter_values.append([mean, std, transition_probability])
 
-            x_t = self.emission_model.sample(mean, std)
+            x_t = self.emission_model.sample(mean, std, sampling_temp=sampling_temp)
 
             if self.hparams.predict_means:
                 x_t = mean

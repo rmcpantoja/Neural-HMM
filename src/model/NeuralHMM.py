@@ -13,7 +13,7 @@ class NeuralHMM(nn.Module):
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
         self.embedding = nn.Embedding(hparams.n_symbols, hparams.symbols_embedding_dim)
-        if hparams.warm_start or hparams.checkpoint_path:
+        if hparams.warm_start or (hparams.checkpoint_path is None):
             # If warm start or resuming training do not re-initialize embeddings
             std = sqrt(2.0 / (hparams.n_symbols + hparams.symbols_embedding_dim))
             val = sqrt(3.0) * std  # uniform bounds for std
@@ -56,7 +56,7 @@ class NeuralHMM(nn.Module):
         return log_probs
 
     @torch.inference_mode()
-    def inference(self, text_inputs):
+    def inference(self, text_inputs, sampling_temp=1.0):
         r"""
         Sampling audio based on single text input
         Args:
@@ -78,12 +78,12 @@ class NeuralHMM(nn.Module):
             states_travelled,
             input_parameters,
             output_parameters,
-        ) = self.hmm.sample(encoder_outputs)
+        ) = self.hmm.sample(encoder_outputs, sampling_temp=sampling_temp)
 
         return mel_output, states_travelled
 
     @torch.inference_mode()
-    def sample(self, text_inputs, text_lengths):
+    def sample(self, text_inputs, text_lengths, sampling_temp=1.0):
         r"""
         Sampling mel spectrogram based on text inputs
         Args:
@@ -106,6 +106,6 @@ class NeuralHMM(nn.Module):
             states_travelled,
             input_parameters,
             output_parameters,
-        ) = self.hmm.sample(encoder_outputs)
+        ) = self.hmm.sample(encoder_outputs, sampling_temp)
 
         return mel_output, states_travelled, input_parameters, output_parameters
